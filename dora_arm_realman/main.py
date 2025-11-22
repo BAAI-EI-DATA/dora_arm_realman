@@ -81,7 +81,6 @@ class RealmanArm:
         return True
 
     def read_joint_state(self) -> tuple[list[float], list[float]]:
-
         _num, robot_info = self.arm.rm_get_current_arm_state()
         joint_degree = robot_info.get('joint', [0.0]*7)
         
@@ -171,8 +170,8 @@ def main():
                 try:
                     jointstate, _ = realman_arm.read_joint_state()
                     gripper_pos = realman_arm.read_gripper()
-                    
-                    node.send_output("joint", pa.array(np.concatenate([jointstate, gripper_pos]), type=pa.float32()))
+                    combined_joint_state = np.concatenate([jointstate, np.array([gripper_pos])])
+                    node.send_output("joint", pa.array(combined_joint_state, type=pa.float32()))
                     
                 except Exception as e:
                     print(f"执行 'get_joint' 失败: {e}")
