@@ -150,15 +150,19 @@ def main():
                     continue
                 
                 try:
-                    joint_targets = event["value"].to_numpy()
-                    realman_arm.movej_canfd(joint_targets)
+                    joint = event["value"].to_numpy()
+                    tmp = 1 if "left" in ARM_ID else 0
+                    joint_target = joint[:len(joint)//2] if "left" in ARM_ID else joint[len(joint)//2:]
+                    realman_arm.movej_canfd(joint_targets[:7])
                     realman_arm.set_gripper(joint_targets[7])
                 except Exception as e:
                     print(f"执行 'action_joint' 失败: {e}")
 
             elif event["id"] == "action_joint_ctrl":
                 try:
-                    joint_targets = event["value"].to_numpy()
+                    joint = event["value"].to_numpy()
+                    tmp = 1 if "left" in ARM_ID else 0
+                    joint_target = joint[:len(joint)//2] if "left" in ARM_ID else joint[len(joint)//2:]
                     realman_arm.movej_canfd(joint_targets[:7])
                     realman_arm.set_gripper(joint_targets[7])
                     ctrl_frame = 200 # 持续200帧
