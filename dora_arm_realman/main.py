@@ -11,7 +11,7 @@ import numpy as np
 from Robotic_Arm.rm_robot_interface import *
 
 
-ARM_ID = os.getenv("ARM_ID", "arm_right")
+ARM_ID = os.getenv("ARM_NAME", "arm_right")
 IP = os.getenv("ARM_IP", "192.168.1.18")
 PORT = int(os.getenv("ARM_PORT", "8080"))
 
@@ -91,10 +91,10 @@ class RealmanArm:
         
         return joint_degree, pose_7d
 
-    def read_gripper(self) -> float:
-
+    def read_gripper(self):
         flag, gripper_dict = self.arm.rm_get_gripper_state()
-        return float(gripper_dict.get('actpos', 0)) if flag else 0.0
+        gripper_actpos = np.array([gripper_dict['actpos']])
+        return gripper_actpos
 
     def set_gripper(self, value):
         value = int(value)
@@ -151,20 +151,20 @@ def main():
                 
                 try:
                     joint = event["value"].to_numpy()
-                    tmp = 1 if "left" in ARM_ID else 0
                     joint_target = joint[:len(joint)//2] if "left" in ARM_ID else joint[len(joint)//2:]
-                    realman_arm.movej_canfd(joint_targets[:7])
-                    realman_arm.set_gripper(joint_targets[7])
+                    print(f"{ARM_ID}的关节为{joint_target},为：{ctrl_frame}")
+                    realman_arm.movej_canfd(joint_target[:7])
+                    realman_arm.set_gripper(joint_target[7])
                 except Exception as e:
                     print(f"执行 'action_joint' 失败: {e}")
 
             elif event["id"] == "action_joint_ctrl":
                 try:
                     joint = event["value"].to_numpy()
-                    tmp = 1 if "left" in ARM_ID else 0
                     joint_target = joint[:len(joint)//2] if "left" in ARM_ID else joint[len(joint)//2:]
-                    realman_arm.movej_canfd(joint_targets[:7])
-                    realman_arm.set_gripper(joint_targets[7])
+                    print(f"{ARM_ID}的关节为{joint_target}")
+                    realman_arm.movej_canfd(joint_target[:7])
+                    realman_arm.set_gripper(joint_target[7])
                     ctrl_frame = 200 # 持续200帧
                 except Exception as e:
                     print(f"执行 'action_joint_ctrl' 失败: {e}")
@@ -174,7 +174,7 @@ def main():
                 try:
                     jointstate, _ = realman_arm.read_joint_state()
                     gripper_pos = realman_arm.read_gripper()
-                    combined_joint_state = np.concatenate([jointstate, np.array([gripper_pos])])
+                    combined_joint_state = np.concatenate([jointstate, gripper_pos])
                     node.send_output("joint", pa.array(combined_joint_state, type=pa.float32()))
                     
                 except Exception as e:
