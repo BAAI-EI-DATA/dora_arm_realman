@@ -84,12 +84,9 @@ class RealmanArm:
         _num, robot_info = self.arm.rm_get_current_arm_state()
         joint_degree = robot_info.get('joint', [0.0]*7)
         
-        position = robot_info.get('pose', [0.0]*6)[:3]
-        euler = robot_info.get('pose', [0.0]*6)[3:]
-        quaternion = self.arm.rm_algo_euler2quaternion(euler)
-        pose_7d = np.concatenate([position, quaternion]).tolist()
-        
-        return joint_degree, pose_7d
+        position = robot_info.get('pose', [0.0]*6)
+                
+        return joint_degree, position
 
     def read_gripper(self):
         flag, gripper_dict = self.arm.rm_get_gripper_state()
@@ -152,7 +149,6 @@ def main():
                 try:
                     joint = event["value"].to_numpy()
                     joint_target = joint[:len(joint)//2] if "left" in ARM_ID else joint[len(joint)//2:]
-                    print(f"{ARM_ID}的关节为{joint_target},为：{ctrl_frame}")
                     realman_arm.movej_canfd(joint_target[:7])
                     realman_arm.set_gripper(joint_target[7])
                 except Exception as e:
@@ -162,7 +158,6 @@ def main():
                 try:
                     joint = event["value"].to_numpy()
                     joint_target = joint[:len(joint)//2] if "left" in ARM_ID else joint[len(joint)//2:]
-                    print(f"{ARM_ID}的关节为{joint_target}")
                     realman_arm.movej_canfd(joint_target[:7])
                     realman_arm.set_gripper(joint_target[7])
                     ctrl_frame = 200 # 持续200帧
@@ -172,11 +167,10 @@ def main():
             elif event["id"] == "get_joint":
                 # 响应关节状态查询
                 try:
-                    jointstate, _ = realman_arm.read_joint_state()
+                    jointstate, positon = realman_arm.read_joint_state()
                     gripper_pos = realman_arm.read_gripper()
-                    combined_joint_state = np.concatenate([jointstate, gripper_pos])
+                    combined_joint_state = np.concatenate([jointstate, gripper_pos, positon])
                     node.send_output("joint", pa.array(combined_joint_state, type=pa.float32()))
-                    
                 except Exception as e:
                     print(f"执行 'get_joint' 失败: {e}")
 
